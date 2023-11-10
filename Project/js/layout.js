@@ -1,12 +1,8 @@
 
-/*
-https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file#unique_file_type_specifiers
-*/
-
 //General utilities.
 const Utils = {
     //Defines acceptable file formats.
-    fileTypes: [
+    imgFileTypes: [
         "image/apng",
         "image/bmp",
         "image/gif",
@@ -20,16 +16,17 @@ const Utils = {
     ],
 
     //Checks if provided file is of an acceptable file format.
-    validFileType(file) {  
-        return this.fileTypes.includes(file.type);
+    isValidFileType(file) {  
+        return this.imgFileTypes.includes(file.type);
     },
 
-    //Takes 2 indexes and places the element at the first index before or after - defined by "insertAfter" -  the element at the second index on teh received list.
+    //Takes 2 indexes and places the element at the first index before or after - defined by "insertAfter" -  the element at the second index on the received list.
     rearrangeList(list = [], source = 0, target = 0, insertAfter = false){
+        source = this.notNaNNumber(source);
+        target = this.notNaNNumber(target);
         if(source != target){
-            source = Number(source);
-            target = Number(target);
-
+            insertAfter = Boolean(insertAfter);
+    
             const sourceElement = list[source];
     
             if(insertAfter){
@@ -44,19 +41,27 @@ const Utils = {
             }
         }
     },
+
+    notNaNNumber(number = 0){
+        number = Number(number);
+        if(isNaN(number)){
+            return 0;
+        }
+        else{
+            return number;
+        }
+    }
 };
 
 //Handles code output creation.
 const Output = {
     //Generates output in code format with appropriate coloring on each segment.
-    generateOutput(){  
+    generateOutput(){
         const output = document.createElement("div");
         let codeOutput = '<span class="atribute-color">filter:</span>'
 
-        let test = [];
-
         if(Filter.imageFiltersList.length != 0){
-            Filter.imageFiltersList.forEach(function(filter){
+            Filter.imageFiltersList.forEach((filter) => {
                 codeOutput += 
                 '<span class="text-color">&nbsp' + filter.filterName + '</span>' +
                 '<span class="parentheses-color">(</span>' + 
@@ -147,22 +152,20 @@ const DOM = {
             preview.removeChild(preview.firstChild);
         }
       
-        //Triggers if there are no files selected, or if file is invalid.
-        if (curFiles.length === 0 || !Utils.validFileType(curFiles[0])) {
-            const defaultImage = document.createElement('img');
-            defaultImage.src = "assets/images/coala.jpg";
-            defaultImage.alt = "Coala Image";
-            defaultImage.classList.add("target-image");
-            preview.appendChild(defaultImage);
-        } else {
-            const newImage = document.createElement('img');
-            newImage.alt = "Your Image";
-            newImage.classList.add("target-image");
-            newImage.src = URL.createObjectURL(curFiles[0]);
-            preview.appendChild(newImage);            
-        }
+        const image = document.createElement('img');
+        image.classList.add("target-image");
 
-        //curFiles represents a list of selected files, in this case we msut use a single one,
+        //Triggers if there are no files selected, or if file is invalid.
+        if (curFiles.length === 0 || !Utils.isValidFileType(curFiles[0])) {
+            image.src = "assets/images/coala.jpg";
+            image.alt = "Coala Image";
+        } else {
+            image.src = URL.createObjectURL(curFiles[0]); 
+            image.alt = "Your Image";
+        }
+        preview.appendChild(image);            
+
+        //curFiles represents a list of selected files, in this case we must use a single one,
         //so curFiles[0] gets the first one and ignores the rest.
 
         this.updateFiltersOntarget();
@@ -180,12 +183,13 @@ const DOM = {
     },
 
     //Selects an example of how to use each filter.
+    //TODO: Create Filter class that contains filter name, placeholderText, inputType and input value handling.
     updateInputPlaceholder(index){
         let placeholderText = '';
         const selectedValue = document.querySelector('.filter[data-index="' + index + '"] .filter-type').value;
 
         switch(selectedValue){
-            case 'blur': placeholderText = '5px'; break;
+            case 'blur': placeholderText = '5px or 1rem'; break;
             case 'brightness': placeholderText = '0.35 or 35%'; break;
             case 'contrast': placeholderText = '0.5 or 50%'; break;
             case 'drop-shadow': placeholderText = '10px 30px 20px #2D2D2D'; break;
@@ -198,65 +202,74 @@ const DOM = {
         }
         document.querySelector('.filter[data-index="' + index + '"] .filter-input').placeholder = placeholderText;
     },
+    
+    displayCopyMessage(){
+        const messageElement = document.querySelector('.copy-message-container');
 
-    copyCssToClipboard(){
-        var targetCode = document.querySelectorAll(".code span");
-        var outputText = '';
-
-        targetCode.forEach(function(span){
-            outputText += span.textContent;
-        })
-        console.log(outputText);
-
-        navigator.clipboard.writeText(outputText.toString());
-        this.displayCopyMessage();
+        messageElement.classList.remove('hidden');
+        setTimeout(() => {messageElement.classList.add('hidden')}, 3000);
     },
 
-    displayCopyMessage(){
-        const messageElement = document.querySelector(".copy-message-container");
+    copyCssToClipboard(){
+        var outputText = document.querySelector(".output-code").textContent;
+        outputText = outputText.replaceAll('\u00A0', '\u0020');
 
-        messageElement.classList.remove("hidden");
-        setTimeout(() => {messageElement.classList.add("hidden");} ,3000)
+        navigator.clipboard.writeText(outputText);
+        DOM.displayCopyMessage();
     },
 };
 
 //Handles filter list maintenance.
 const Filter = {
     //Main filters list. Everything is centered around this.
-    //After every change on this list, we msut call App.reload() to update GUI.
-    imageFiltersList: [],
+    //A list that after every set operation calls App.reload() to update GUI.
+    imageFiltersList: null,
+
+    init() {
+        // Initialize the imageFiltersList property with the result of listAutoUpdate
+        this.imageFiltersList = this.listAutoUpdate();
+    },
 
     addNewFilter(filter){
         this.imageFiltersList.push(filter);
-        App.reload();
     },
 
     removeFilter(index){
         this.imageFiltersList.splice(index, 1);
-        App.reload();
     },
 
     updateFiltersListName(value, index){
         this.imageFiltersList[index].filterName = value;
-        App.reload();        
     },
 
     updateFiltersListValue(value, index){
         this.imageFiltersList[index].value = value;
-        App.reload();
     },
 
     swapFilters(source, target){
-        const temp = Filter.imageFiltersList[target];
+        const temp = this.imageFiltersList[target];
         
-        Filter.imageFiltersList[target] = Filter.imageFiltersList[source];
-        Filter.imageFiltersList[source] = temp;
-        App.reload();
+        this.imageFiltersList[target] = this.imageFiltersList[source];
+        this.imageFiltersList[source] = temp;
     },
 
     rearrangeFiltersList(source, target, insertAfter){
-        Utils.rearrangeList(Filter.imageFiltersList, source, target, insertAfter);
-        App.reload();
+        Utils.rearrangeList(this.imageFiltersList, source, target, insertAfter);
+    },
+
+    //Defiens a Proxy for an array that calls "App.reload()" on each set operation.
+    listAutoUpdate(){
+        const list = [];
+    
+        const handler = {
+            set(target, prop, value){
+                target[prop] = value;
+                App.reload();
+                return true;
+            },
+        };
+    
+        return new Proxy(list, handler);
     }
 };
 
@@ -269,7 +282,6 @@ const Drag = {
     //When an elements is being dragged, we get a refference to that element index.
     onDragStart(index){
         Drag.draggedElementIndex = index;
-        //console.log("Dragged index: " + index);
     },
 
     //When we release an element, we swap it with the one below on a list, based on their index refferences
@@ -285,7 +297,6 @@ const Drag = {
     onDragOver(index, draggedAfter){
         Drag.draggedOverElementIndex = index;
         Drag.draggedAfter = draggedAfter;
-        //console.log("Dragged over index: " + index);
     },
 };
 
@@ -294,18 +305,14 @@ const EventListeners = {
     //Subscribes elements that wont change. 
     //MUST be called only once at the start to avoid listener duplicity.
     subscribeEventListeners(){
-        document.getElementById("input-target-image").addEventListener('change', function(){
-            DOM.updateImageDisplay();
-        });
+        document.getElementById("input-target-image").addEventListener('change', DOM.updateImageDisplay);
 
         document.getElementById("new-filter").addEventListener('click', function(){
             const imageFilterTemplate = {filterName: 'blur', value: ''};
             Filter.addNewFilter(imageFilterTemplate);
         });
 
-        document.getElementById("copy-btn").addEventListener("click", function(){
-            DOM.copyCssToClipboard();
-        });
+        document.getElementById("copy-btn").addEventListener("click", DOM.copyCssToClipboard);
     },
 
     //Subscribes all elements that change over time, such as filters.
@@ -316,32 +323,26 @@ const EventListeners = {
 
             const index = elementFilter.dataset.index;
 
-            elementFilter.querySelector("select").addEventListener('change', function(event){
+            elementFilter.querySelector("select").addEventListener('change', (event) => {
                 Filter.updateFiltersListName(event.target.value, index);
                 Filter.updateFiltersListValue('', index);
                 DOM.updateInputPlaceholder(index);
                 DOM.updateFiltersOntarget();
             });
 
-            elementFilter.querySelector("input").addEventListener('change', function(event){
+            elementFilter.querySelector("input").addEventListener('change', (event) => {
                 Filter.updateFiltersListValue(event.target.value, index);
                 DOM.updateFiltersOntarget();
             });
 
-            elementFilter.querySelector(".delete-button").addEventListener('click', function(){
-                Filter.removeFilter(index);
-            });
+            elementFilter.querySelector(".delete-button").addEventListener('click', () => Filter.removeFilter(index));
 
             //Drag listeners
-            elementFilter.addEventListener('dragstart', () =>{
-                Drag.onDragStart(index);
-            })
+            elementFilter.addEventListener('dragstart', () => Drag.onDragStart(index));
 
-            elementFilter.addEventListener('dragend', () =>{
-                Drag.onDragEnd();
-            })
+            elementFilter.addEventListener('dragend', Drag.onDragEnd);
 
-            elementFilter.addEventListener('dragover', (event) =>{
+            elementFilter.addEventListener('dragover', (event) => {
                 if(event.clientY > elementFilter.offsetTop + (elementFilter.offsetHeight / 2)){
                     Drag.onDragOver(index, true);
                 }else{
@@ -358,9 +359,7 @@ const App = {
     //then does GUI maintenance.
     init(){
         if(Filter.imageFiltersList.length > 0){
-            Filter.imageFiltersList.forEach(function(filter, index){
-                DOM.createFilter(filter, index);
-            })
+            Filter.imageFiltersList.forEach((filter, index) => DOM.createFilter(filter, index));
         }
         Output.updateOutputDisplay();
         EventListeners.subscribeDynamicEventListeners();
@@ -373,5 +372,6 @@ const App = {
     },
 }
 
+Filter.init();
 App.init();
 EventListeners.subscribeEventListeners();
