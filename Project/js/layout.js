@@ -21,35 +21,27 @@ const Utils = {
     },
 
     //Takes 2 indexes and places the element at the first index before or after - defined by "insertAfter" -  the element at the second index on the received list.
-    rearrangeList(list = [], source = 0, target = 0, insertAfter = false){
+    rearrangeList(list = [], source = 0, target = 0, insertAfter = false) {
         source = this.notNaNNumber(source);
         target = this.notNaNNumber(target);
-        if(source != target){
+    
+        if (source !== target) {
             insertAfter = Boolean(insertAfter);
     
-            const sourceElement = list[source];
+            const sourceElement = list.splice(source, 1)[0];
     
-            if(insertAfter){
+            if (insertAfter) {
                 list.splice(target + 1, 0, sourceElement);
-            }else{
+            } else {
                 list.splice(target, 0, sourceElement);
-            }
-            if(source > target){
-                list.splice(source + 1, 1);
-            }else{
-                list.splice(source, 1);  
             }
         }
     },
+    
 
     notNaNNumber(number = 0){
         number = Number(number);
-        if(isNaN(number)){
-            return 0;
-        }
-        else{
-            return number;
-        }
+        return isNaN(number) ? 0 : number;
     }
 };
 
@@ -60,7 +52,7 @@ const Output = {
         const output = document.createElement("div");
         let codeOutput = '<span class="atribute-color">filter:</span>'
 
-        if(Filter.imageFiltersList.length != 0){
+        if(Filter.imageFiltersList.length > 0){
             Filter.imageFiltersList.forEach((filter) => {
                 codeOutput += 
                 '<span class="text-color">&nbsp' + filter.filterName + '</span>' +
@@ -77,10 +69,11 @@ const Output = {
 
         output.innerHTML = codeOutput;
         output.classList.add("code");
-        return output;
 
         //Example: 
         //filter: blur(34%) sepia(23%) drop-shadow(10px 20px 30px #343434);
+        return output;
+
     },
 
     //Resets code display and then outputs formated code.
@@ -284,8 +277,7 @@ const Drag = {
         Drag.draggedElementIndex = index;
     },
 
-    //When we release an element, we swap it with the one below on a list, based on their index refferences
-    //Then, we re-render the list.
+    //When we release an element, we place it near the one below it, based on where you are hovering over the element - bottom or top half
     onDragEnd(){
         if(Drag.draggedOverElementIndex != undefined){
             //Filter.swapFilters(Drag.draggedElementIndex, Drag.draggedOverElementIndex);
@@ -307,7 +299,7 @@ const EventListeners = {
     subscribeEventListeners(){
         document.getElementById("input-target-image").addEventListener('change', DOM.updateImageDisplay);
 
-        document.getElementById("new-filter").addEventListener('click', function(){
+        document.getElementById("new-filter").addEventListener('click', () => {
             const imageFilterTemplate = {filterName: 'blur', value: ''};
             Filter.addNewFilter(imageFilterTemplate);
         });
@@ -342,13 +334,8 @@ const EventListeners = {
 
             elementFilter.addEventListener('dragend', Drag.onDragEnd);
 
-            elementFilter.addEventListener('dragover', (event) => {
-                if(event.clientY > elementFilter.offsetTop + (elementFilter.offsetHeight / 2)){
-                    Drag.onDragOver(index, true);
-                }else{
-                    Drag.onDragOver(index, false);
-                }
-            })
+            elementFilter.addEventListener('dragover', (event) => 
+                Drag.onDragOver(index, event.clientY > elementFilter.offsetTop + (elementFilter.offsetHeight / 2)));
         }); 
     },
 };
