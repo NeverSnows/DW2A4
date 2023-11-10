@@ -215,6 +215,7 @@ body{
 }
 
 /* Output Code */
+
 .output-code-container{
     display: flex;
     flex-direction: column;
@@ -344,7 +345,7 @@ footer{
     color: var(--link);
     transition: all 0.2s;
     margin: 1rem;
-    cursor: url(/Atividade_9/assets/images/test.svg) 1 1, ne-resize;
+    cursor: url(/assets/images/test.svg) 1 1, ne-resize;
 
 }
 

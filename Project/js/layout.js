@@ -50,7 +50,7 @@ const Output = {
     //Generates output in code format with appropriate coloring on each segment.
     generateOutput(){
         const output = document.createElement("div");
-        let codeOutput = '<span class="atribute-color">filter:</span>'
+        let codeOutput = '<span class="atribute-color">filter:</span>';
 
         if(Filter.imageFiltersList.length > 0){
             Filter.imageFiltersList.forEach((filter) => {
